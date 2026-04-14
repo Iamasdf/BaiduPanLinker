@@ -1,0 +1,5 @@
+{
+  "enable_web": true,
+  "enable_api": true,
+  "web_port": 8080
+}

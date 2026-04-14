@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baidu.pan文件管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #1a73e8; margin-bottom: 10px; }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .user-badge {
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+        button {
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #1557b0; }
+        button.secondary {
+            background: #fff;
+            color: #1a73e8;
+            border: 1px solid #1a73e8;
+        }
+        button.secondary:hover { background: #e8f0fe; }
+        button.danger { background: #d93025; }
+        button.danger:hover { background: #a93025; }
+        button.success { background: #137333; }
+        button.success:hover { background: #0d5c28; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .batch-toolbar {
+            background: #fff;
+            padding: 12px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .batch-toolbar .selected-count {
+            color: #666;
+            font-size: 14px;
+            margin-right: auto;
+        }
+        .toolbar {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .path-bar {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .path-bar span {
+            background: #f1f3f4;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .path-bar span:hover { background: #e8f0fe; }
+        .file-list {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .file-header {
+            display: grid;
+            grid-template-columns: 50px 1fr 120px 180px 200px;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 13px;
+            color: #666;
+        }
+        .file-item {
+            display: grid;
+            grid-template-columns: 50px 1fr 120px 180px 200px;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+            font-size: 14px;
+        }
+        .file-item:hover { background: #f8f9fa; }
+        .file-item:last-child { border-bottom: none; }
+        .file-icon { font-size: 18px; }
+        .file-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #1a73e8;
+            overflow: hidden;
+        }
+        .file-name:hover { text-decoration: underline; }
+        .file-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-size { color: #666; font-size: 13px; }
+        .file-time { color: #999; font-size: 13px; }
+        .file-actions { display: flex; gap: 5px; }
+        .file-actions button { padding: 4px 10px; font-size: 12px; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal h2 { margin-bottom: 20px; color: #1a73e8; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .alert {
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .alert.error { background: #fce8e6; color: #c5221f; }
+        .alert.success { background: #e6f4ea; color: #137333; }
+        .loading { text-align: center; padding: 30px; color: #666; }
+        .stats { font-size: 13px; color: #666; }
+        .links-list { max-height: 300px; overflow-y: auto; }
+        .link-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .link-item:last-child { border-bottom: none; }
+        .link-item a { color: #1a73e8; word-break: break-all; flex: 1; }
+        .link-item button { padding: 4px 8px; font-size: 12px; white-space: nowrap; }
+        .batch-result { padding: 10px; border-bottom: 1px solid #eee; }
+        .batch-result:last-child { border-bottom: none; }
+        .batch-result.success { background: #e6f4ea; }
+        .batch-result.error { background: #fce8e6; }
+        .batch-result-header { font-weight: 500; margin-bottom: 5px; }
+        .batch-result-links { margin-top: 5px; }
+        .checkbox { width: 18px; height: 18px; cursor: pointer; }
+        .rpc-status { display: flex; align-items: center; gap: 10px; }
+        .rpc-status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .rpc-status-dot.online { background: #137333; }
+        .rpc-status-dot.offline { background: #d93025; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Baidu.pan文件管理</h1>
+            <div class="user-info">
+                <span class="stats" id="userStats">加载中...</span>
+                <span class="rpc-status" id="rpcStatus">
+                    <span class="rpc-status-dot offline" id="rpcStatusDot"></span>
+                    <span id="rpcStatusText">RPC 未连接</span>
+                </span>
+                <button onclick="showLoginModal()">添加账号</button>
+                <button class="secondary" onclick="showUsersModal()">管理账号</button>
+            </div>
+            <div id="alertBox"></div>
+        </header>
+
+        <div class="batch-toolbar">
+            <span class="selected-count" id="selectedCount">已选 0 项</span>
+            <button onclick="selectAll()">全选</button>
+            <button onclick="deselectAll()">取消全选</button>
+            <button onclick="sendSelectedToRPC()" id="btnSendRPC" disabled>发送到 RPC</button>
+            <button onclick="copySelectedLinks()" id="btnCopyLinks" disabled>复制链接</button>
+            <button onclick="copySelectedAsAria2c()" id="btnCopyAria" disabled>复制 Aria2c</button>
+            <button onclick="copySelectedAsCurl()" id="btnCopyCurl" disabled>复制 cUrl</button>
+            <button onclick="showRPCConfig()">RPC设置</button>
+            <button onclick="openRPCTask()" class="secondary">查看任务</button>
+        </div>
+
+        <div class="toolbar">
+            <div class="path-bar" id="pathBar">
+                <span onclick="navigateTo('/')">/</span>
+            </div>
+            <button onclick="refreshList()">刷新</button>
+        </div>
+
+        <div class="file-list" id="fileList">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <div class="modal" id="usersModal">
+        <div class="modal-content">
+            <h2>管理账号</h2>
+            <div id="usersList" class="loading">加载中...</div>
+            <div class="form-actions">
+                <button class="secondary" onclick="closeModal('usersModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <h2>添加账号</h2>
+            <div class="form-group">
+                <label>BDUSS *</label>
+                <input type="text" id="loginBduss" placeholder="请输入 BDUSS">
+            </div>
+            <div class="form-group">
+                <label>PToken (可选)</label>
+                <input type="text" id="loginPtoken" placeholder="可选">
+            </div>
+            <div class="form-group">
+                <label>SToken (可选)</label>
+                <input type="text" id="loginStoken" placeholder="可选">
+            </div>
+            <div class="form-actions">
+                <button class="secondary" onclick="closeModal('loginModal')">取消</button>
+                <button onclick="doLogin()">登录</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="rpcConfigModal">
+        <div class="modal-content">
+            <h2>RPC 配置</h2>
+            <div class="form-group">
+                <label>RPC 主机地址</label>
+                <input type="text" id="rpcDomain" placeholder="http://localhost">
+            </div>
+            <div class="form-group">
+                <label>RPC 端口</label>
+                <input type="text" id="rpcPort" placeholder="16800">
+            </div>
+            <div class="form-group">
+                <label>RPC 路径</label>
+                <input type="text" id="rpcPath" placeholder="/jsonrpc">
+            </div>
+            <div class="form-group">
+                <label>RPC 密钥</label>
+                <input type="text" id="rpcToken" placeholder="无密钥无需填写">
+            </div>
+            <div class="form-group">
+                <label>下载保存路径</label>
+                <input type="text" id="rpcDir" placeholder="D:\Downloads">
+            </div>
+            <div class="form-actions">
+                <button onclick="testRPCConnection()">测试连接</button>
+                <button onclick="saveRPCConfig()">保存</button>
+                <button class="secondary" onclick="closeModal('rpcConfigModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="downloadModal">
+        <div class="modal-content">
+            <h2 id="downloadModalTitle">下载地址</h2>
+            <div id="downloadLinks"></div>
+            <div class="form-actions">
+                <button class="secondary" onclick="closeModal('downloadModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        const DEFAULT_RPC = {
+            domain: 'http://localhost',
+            port: '16800',
+            path: '/jsonrpc',
+            token: '',
+            dir: 'D:'
+        };
+
+        let currentPath = '/';
+        let currentFiles = [];
+        let selectedFiles = new Set();
+
+        function e(str) {
+            return btoa(unescape(encodeURIComponent(str)));
+        }
+
+        function d(str) {
+            return decodeURIComponent(escape(atob(str)));
+        }
+
+        function getRPCConfig() {
+            try {
+                const config = localStorage.getItem('baidupcs_rpc_config');
+                return config ? JSON.parse(config) : DEFAULT_RPC;
+            } catch (e) {
+                return DEFAULT_RPC;
+            }
+        }
+
+        function saveRPCConfigToStorage(config) {
+            localStorage.setItem('baidupcs_rpc_config', JSON.stringify(config));
+        }
+
+        async function rpcPost(url, data) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            resolve(JSON.parse(xhr.responseText));
+                        } catch (e) {
+                            resolve(xhr.responseText);
+                        }
+                    } else {
+                        reject(new Error('RPC request failed'));
+                    }
+                };
+                xhr.onerror = () => reject(new Error('Network error'));
+                xhr.send(JSON.stringify(data));
+            });
+        }
+
+        async function testRPCConnection() {
+            const config = getRPCConfig();
+            const url = `${config.domain}:${config.port}${config.path}`;
+            const data = {
+                jsonrpc: '2.0',
+                method: 'aria2.getVersion',
+                params: [`token:${config.token}`],
+                id: new Date().getTime()
+            };
+            try {
+                const res = await rpcPost(url, data);
+                if (res.result) {
+                    showAlert(`连接成功! Aria2 版本: ${res.result.version}`, 'success');
+                } else {
+                    showAlert('连接失败，请检查配置', 'error');
+                }
+            } catch (e) {
+                showAlert('连接失败: ' + e.message, 'error');
+            }
+        }
+
+        async function sendToRPC(filename, link) {
+            const config = getRPCConfig();
+            const url = `${config.domain}:${config.port}${config.path}`;
+            const data = {
+                id: new Date().getTime(),
+                jsonrpc: '2.0',
+                method: 'aria2.addUri',
+                params: [`token:${config.token}`, [link], {
+                    dir: config.dir,
+                    out: filename,
+                    header: ['User-Agent: netdisk']
+                }]
+            };
+            const res = await rpcPost(url, data);
+            return res.result ? 'success' : 'fail';
+        }
+
+        function getRPCUrl() {
+            const config = getRPCConfig();
+            const rpc = `${config.domain}:${config.port}${config.path}`;
+            return `${config.domain}:${config.port}/?rpc=${e(rpc)}#${config.token}`;
+        }
+
+        function getAriaNgUrl() {
+            const config = getRPCConfig();
+            const rpcConfig = {
+                host: config.domain.replace(/^https?:\/\//, ''),
+                port: config.port,
+                secret: config.token,
+                path: config.path
+            };
+            const encoded = e(JSON.stringify(rpcConfig));
+            return `https://ariang.mayswind.net/latest/#!/rpc?saved=${encoded}`;
+        }
+
+        function openRPCTask() {
+            const url = getAriaNgUrl();
+            window.open(url, '_blank');
+        }
+
+        async function api(url, options = {}) {
+            try {
+                const res = await fetch('/api' + url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                const data = await res.json();
+                if (data.code !== 200) {
+                    showAlert(data.message, 'error');
+                    throw new Error(data.message);
+                }
+                return data;
+            } catch (e) {
+                if (e.message !== 'Failed to fetch') {
+                    console.error(e);
+                }
+                throw e;
+            }
+        }
+
+        function showAlert(message, type = 'error') {
+            const box = document.getElementById('alertBox');
+            box.innerHTML = `<div class="alert ${type}">${message}</div>`;
+            setTimeout(() => box.innerHTML = '', 5000);
+        }
+
+        function showModal(id) {
+            document.getElementById(id).classList.add('show');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        async function checkLogin() {
+            try {
+                const data = await api('/users');
+                const users = data.data.users || [];
+                const activeUser = users.find(u => u.is_active);
+                
+                if (activeUser) {
+                    document.getElementById('userStats').textContent = 
+                        `当前账号: ${activeUser.name} (UID: ${activeUser.uid})`;
+                } else {
+                    document.getElementById('userStats').textContent = '未登录账号';
+                }
+                return !!activeUser;
+            } catch (e) {
+                document.getElementById('userStats').textContent = '未登录账号';
+                return false;
+            }
+        }
+
+        function updateRPCStatus(online) {
+            const dot = document.getElementById('rpcStatusDot');
+            const text = document.getElementById('rpcStatusText');
+            if (online) {
+                dot.className = 'rpc-status-dot online';
+                text.textContent = 'RPC 已连接';
+            } else {
+                dot.className = 'rpc-status-dot offline';
+                text.textContent = 'RPC 未连接';
+            }
+        }
+
+        async function checkRPCStatus() {
+            const config = getRPCConfig();
+            const url = `${config.domain}:${config.port}${config.path}`;
+            const data = {
+                jsonrpc: '2.0',
+                method: 'aria2.getVersion',
+                params: [`token:${config.token}`],
+                id: new Date().getTime()
+            };
+            try {
+                const res = await rpcPost(url, data);
+                updateRPCStatus(!!res.result);
+            } catch (e) {
+                updateRPCStatus(false);
+            }
+        }
+
+        async function refreshList() {
+            if (!await checkLogin()) {
+                document.getElementById('fileList').innerHTML = 
+                    '<div class="loading">请先登录账号</div>';
+                return;
+            }
+
+            document.getElementById('fileList').innerHTML = '<div class="loading">加载中...</div>';
+            
+            try {
+                const data = await api(`/files?path=${encodeURIComponent(currentPath)}`);
+                currentFiles = data.data.files || [];
+                selectedFiles.clear();
+                updateSelectedUI();
+                renderFiles();
+            } catch (e) {
+                document.getElementById('fileList').innerHTML = 
+                    '<div class="loading">加载失败</div>';
+            }
+        }
+
+        function renderFiles() {
+            if (currentFiles.length === 0) {
+                document.getElementById('fileList').innerHTML = 
+                    '<div class="loading">目录为空</div>';
+                return;
+            }
+
+            let html = `
+                <div class="file-header">
+                    <span><input type="checkbox" class="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)"></span>
+                    <span>名称</span>
+                    <span>大小</span>
+                    <span>修改时间</span>
+                    <span>操作</span>
+                </div>
+            `;
+
+            currentFiles.forEach((file, index) => {
+                const icon = file.is_dir ? '📁' : '📄';
+                const size = file.is_dir ? '-' : file.size_str;
+                const isSelected = selectedFiles.has(file.path);
+                
+                html += `
+                    <div class="file-item">
+                        <span><input type="checkbox" class="checkbox file-checkbox" 
+                            data-path="${file.path}" data-name="${file.name}"
+                            ${isSelected ? 'checked' : ''}
+                            onchange="toggleFileSelect('${file.path}')"></span>
+                        <span class="file-name" onclick="navigateTo('${file.path}')">
+                            <span>${icon}</span>
+                            <span>${file.name}${file.is_dir ? '/' : ''}</span>
+                        </span>
+                        <span class="file-size">${size}</span>
+                        <span class="file-time">${file.mtime_str}</span>
+                        <span class="file-actions">
+                            ${!file.is_dir ? `<button onclick="getDownloadLink('${file.path}', '${file.name}')">获取链接</button>` : ''}
+                            ${!file.is_dir ? `<button onclick="sendFileToRPC('${file.path}', '${file.name}')">发送到RPC</button>` : ''}
+                        </span>
+                    </div>
+                `;
+            });
+
+            document.getElementById('fileList').innerHTML = html;
+        }
+
+        function toggleFileSelect(path) {
+            if (selectedFiles.has(path)) {
+                selectedFiles.delete(path);
+            } else {
+                selectedFiles.add(path);
+            }
+            updateSelectedUI();
+        }
+
+        function toggleSelectAll(checked) {
+            currentFiles.forEach(file => {
+                if (!file.is_dir) {
+                    if (checked) {
+                        selectedFiles.add(file.path);
+                    } else {
+                        selectedFiles.delete(file.path);
+                    }
+                }
+            });
+            document.querySelectorAll('.file-checkbox').forEach(cb => {
+                cb.checked = checked;
+            });
+            updateSelectedUI();
+        }
+
+        function selectAll() {
+            currentFiles.forEach(file => {
+                if (!file.is_dir) {
+                    selectedFiles.add(file.path);
+                }
+            });
+            document.querySelectorAll('.file-checkbox').forEach(cb => {
+                cb.checked = true;
+            });
+            document.getElementById('selectAllCheckbox').checked = true;
+            updateSelectedUI();
+        }
+
+        function deselectAll() {
+            selectedFiles.clear();
+            document.querySelectorAll('.file-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            document.getElementById('selectAllCheckbox').checked = false;
+            updateSelectedUI();
+        }
+
+        function updateSelectedUI() {
+            const count = selectedFiles.size;
+            document.getElementById('selectedCount').textContent = `已选 ${count} 项`;
+            
+            const btns = ['btnSendRPC', 'btnCopyLinks', 'btnCopyAria', 'btnCopyCurl'];
+            btns.forEach(id => {
+                document.getElementById(id).disabled = count === 0;
+            });
+        }
+
+        function updatePathBar(path) {
+            const parts = path.split('/').filter(p => p);
+            let html = '<span onclick="navigateTo(\'/\')">/</span>';
+            let accumulated = '';
+            
+            parts.forEach(part => {
+                accumulated += '/' + part;
+                html += `<span onclick="navigateTo('${accumulated}')">${part}</span>`;
+            });
+
+            document.getElementById('pathBar').innerHTML = html;
+        }
+
+        function navigateTo(path) {
+            currentPath = path;
+            updatePathBar(path);
+            refreshList();
+        }
+
+        async function getDownloadLink(path, name) {
+            try {
+                const data = await api(`/files/download?path=${encodeURIComponent(path)}`);
+                const links = data.data.links || [];
+                
+                let html = '<div class="links-list">';
+                if (links.length === 0) {
+                    html += '<div class="loading">未找到下载链接</div>';
+                } else {
+                    links.forEach((link, i) => {
+                        html += `<div class="link-item">
+                            <a href="${link.url}" target="_blank">链接 ${i + 1}</a>
+                            <button onclick="copyToClipboard('${link.url}')">复制</button>
+                            <button onclick="copyAsAria2cCmd('${name}', '${link.url}')">Aria2c</button>
+                            <button onclick="copyAsCurlCmd('${name}', '${link.url}')">cUrl</button>
+                        </div>`;
+                    });
+                }
+                html += '</div>';
+                
+                document.getElementById('downloadModalTitle').textContent = name;
+                document.getElementById('downloadLinks').innerHTML = html;
+                showModal('downloadModal');
+            } catch (e) {
+                // error already shown
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('已复制到剪贴板', 'success');
+            });
+        }
+
+        function fixFilename(name) {
+            return name.replace(/[!?&|`"'*\/:<>\\]/g, '_');
+        }
+
+        function copyAsAria2cCmd(filename, link) {
+            const cmd = `aria2c "${link}" --out "${fixFilename(filename)}" --header "User-Agent: netdisk"`;
+            copyToClipboard(cmd);
+        }
+
+        function copyAsCurlCmd(filename, link) {
+            const cmd = `curl -L -o "${fixFilename(filename)}" "${link}"`;
+            copyToClipboard(cmd);
+        }
+
+        async function sendFileToRPC(path, name) {
+            try {
+                showAlert('正在获取链接并发送...', 'success');
+                const data = await api(`/files/download?path=${encodeURIComponent(path)}`);
+                const links = data.data.links || [];
+                
+                if (links.length === 0) {
+                    showAlert('未找到下载链接', 'error');
+                    return;
+                }
+
+                const result = await sendToRPC(name, links[0].url);
+                if (result === 'success') {
+                    showAlert(`已发送到 RPC: ${name}`, 'success');
+                } else {
+                    showAlert('发送失败，请检查 RPC 配置', 'error');
+                }
+            } catch (e) {
+                showAlert('发送失败: ' + e.message, 'error');
+            }
+        }
+
+        async function sendSelectedToRPC() {
+            if (selectedFiles.size === 0) return;
+            
+            const paths = Array.from(selectedFiles);
+            showAlert(`正在获取 ${paths.length} 个文件的链接并发送...`, 'success');
+            
+            try {
+                const data = await api('/files/batch', {
+                    method: 'POST',
+                    body: JSON.stringify({ paths })
+                });
+                
+                const results = data.data.results || [];
+                let success = 0, fail = 0;
+                
+                for (const result of results) {
+                    if (result.error) {
+                        fail++;
+                        continue;
+                    }
+                    if (result.links && result.links.length > 0) {
+                        const name = result.path.split('/').pop();
+                        const res = await sendToRPC(name, result.links[0].url);
+                        if (res === 'success') success++;
+                        else fail++;
+                    } else {
+                        fail++;
+                    }
+                }
+                
+                if (success > 0) {
+                    showAlert(`成功发送 ${success} 个文件${fail > 0 ? `，失败 ${fail} 个` : ''}`, 'success');
+                } else {
+                    showAlert(`全部失败，请检查 RPC 配置`, 'error');
+                }
+            } catch (e) {
+                showAlert('发送失败: ' + e.message, 'error');
+            }
+        }
+
+        async function copySelectedLinks() {
+            if (selectedFiles.size === 0) return;
+            
+            const paths = Array.from(selectedFiles);
+            try {
+                const data = await api('/files/batch', {
+                    method: 'POST',
+                    body: JSON.stringify({ paths })
+                });
+                
+                const results = data.data.results || [];
+                let links = [];
+                
+                results.forEach(result => {
+                    if (result.links && result.links.length > 0) {
+                        links.push(...result.links.map(l => l.url));
+                    }
+                });
+                
+                if (links.length > 0) {
+                    copyToClipboard(links.join('\n'));
+                    showAlert(`已复制 ${links.length} 个链接`, 'success');
+                } else {
+                    showAlert('未获取到任何链接', 'error');
+                }
+            } catch (e) {
+                showAlert('获取链接失败: ' + e.message, 'error');
+            }
+        }
+
+        async function copySelectedAsAria2c() {
+            if (selectedFiles.size === 0) return;
+            
+            const paths = Array.from(selectedFiles);
+            try {
+                const data = await api('/files/batch', {
+                    method: 'POST',
+                    body: JSON.stringify({ paths })
+                });
+                
+                const results = data.data.results || [];
+                let cmds = [];
+                
+                results.forEach(result => {
+                    if (result.links && result.links.length > 0) {
+                        const name = result.path.split('/').pop();
+                        cmds.push(`aria2c "${result.links[0].url}" --out "${fixFilename(name)}" --header "User-Agent: netdisk"`);
+                    }
+                });
+                
+                if (cmds.length > 0) {
+                    copyToClipboard(cmds.join('\n'));
+                    showAlert(`已复制 ${cmds.length} 条 Aria2c 命令`, 'success');
+                } else {
+                    showAlert('未获取到任何链接', 'error');
+                }
+            } catch (e) {
+                showAlert('获取链接失败: ' + e.message, 'error');
+            }
+        }
+
+        async function copySelectedAsCurl() {
+            if (selectedFiles.size === 0) return;
+            
+            const paths = Array.from(selectedFiles);
+            try {
+                const data = await api('/files/batch', {
+                    method: 'POST',
+                    body: JSON.stringify({ paths })
+                });
+                
+                const results = data.data.results || [];
+                let cmds = [];
+                
+                results.forEach(result => {
+                    if (result.links && result.links.length > 0) {
+                        const name = result.path.split('/').pop();
+                        cmds.push(`curl -L -o "${fixFilename(name)}" "${result.links[0].url}"`);
+                    }
+                });
+                
+                if (cmds.length > 0) {
+                    copyToClipboard(cmds.join('\n'));
+                    showAlert(`已复制 ${cmds.length} 条 cUrl 命令`, 'success');
+                } else {
+                    showAlert('未获取到任何链接', 'error');
+                }
+            } catch (e) {
+                showAlert('获取链接失败: ' + e.message, 'error');
+            }
+        }
+
+        function showRPCConfig() {
+            const config = getRPCConfig();
+            document.getElementById('rpcDomain').value = config.domain;
+            document.getElementById('rpcPort').value = config.port;
+            document.getElementById('rpcPath').value = config.path;
+            document.getElementById('rpcToken').value = config.token;
+            document.getElementById('rpcDir').value = config.dir;
+            showModal('rpcConfigModal');
+        }
+
+        function saveRPCConfig() {
+            const config = {
+                domain: document.getElementById('rpcDomain').value.trim() || DEFAULT_RPC.domain,
+                port: document.getElementById('rpcPort').value.trim() || DEFAULT_RPC.port,
+                path: document.getElementById('rpcPath').value.trim() || DEFAULT_RPC.path,
+                token: document.getElementById('rpcToken').value.trim() || DEFAULT_RPC.token,
+                dir: document.getElementById('rpcDir').value.trim() || DEFAULT_RPC.dir
+            };
+            saveRPCConfigToStorage(config);
+            showAlert('RPC 配置已保存', 'success');
+            closeModal('rpcConfigModal');
+            checkRPCStatus();
+        }
+
+        async function showUsersModal() {
+            showModal('usersModal');
+            document.getElementById('usersList').innerHTML = '<div class="loading">加载中...</div>';
+
+            try {
+                const data = await api('/users');
+                const users = data.data.users || [];
+                
+                if (users.length === 0) {
+                    document.getElementById('usersList').innerHTML = '<div class="loading">暂无账号</div>';
+                    return;
+                }
+
+                let html = '';
+                users.forEach(user => {
+                    const active = user.is_active ? ' (当前)' : '';
+                    html += `
+                        <div class="file-item" style="grid-template-columns: 1fr auto;">
+                            <span>${user.name} (UID: ${user.uid})${active}</span>
+                            <span class="file-actions">
+                                ${!user.is_active ? `<button onclick="switchUser(${user.uid})">切换</button>` : ''}
+                            </span>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('usersList').innerHTML = html;
+            } catch (e) {
+                document.getElementById('usersList').innerHTML = '<div class="loading">加载失败</div>';
+            }
+        }
+
+        async function switchUser(uid) {
+            try {
+                await api('/users/switch', {
+                    method: 'POST',
+                    body: JSON.stringify({ uid })
+                });
+                showAlert('切换成功', 'success');
+                closeModal('usersModal');
+                checkLogin();
+                refreshList();
+            } catch (e) {
+                // error already shown
+            }
+        }
+
+        function showLoginModal() {
+            showModal('loginModal');
+        }
+
+        async function doLogin() {
+            const bduss = document.getElementById('loginBduss').value.trim();
+            const ptoken = document.getElementById('loginPtoken').value.trim();
+            const stoken = document.getElementById('loginStoken').value.trim();
+
+            if (!bduss) {
+                showAlert('请输入 BDUSS');
+                return;
+            }
+
+            try {
+                await api('/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ bduss, ptoken, stoken })
+                });
+                showAlert('登录成功', 'success');
+                closeModal('loginModal');
+                document.getElementById('loginBduss').value = '';
+                document.getElementById('loginPtoken').value = '';
+                document.getElementById('loginStoken').value = '';
+                checkLogin();
+                refreshList();
+            } catch (e) {
+                // error already shown
+            }
+        }
+
+        checkLogin();
+        refreshList();
+        checkRPCStatus();
+        setInterval(checkRPCStatus, 30000);
+    </script>
+</body>
+</html>
