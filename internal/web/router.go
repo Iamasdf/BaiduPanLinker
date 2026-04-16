@@ -15,7 +15,22 @@ func SetupAPIRouter() *gin.Engine {
 		{
 			files.GET("", handler.GetFiles)
 			files.GET("/download", handler.GetDownloadLink)
+			files.GET("/download-file", handler.DownloadFile)
+			files.POST("/download", handler.CreateDownload)
 			files.POST("/batch", handler.BatchGetDownloadLinks)
+		}
+
+		download := api.Group("/download")
+		{
+			download.GET("/list", handler.ListDownloads)
+			download.GET("/:task_id", handler.GetDownloadStatus)
+			download.POST("/:task_id/pause", handler.PauseDownload)
+			download.POST("/:task_id/resume", handler.ResumeDownload)
+			download.POST("/:task_id/cancel", handler.CancelDownload)
+			download.GET("/history", handler.GetDownloadHistory)
+			download.POST("/clear-history", handler.ClearDownloadHistory)
+			download.DELETE("/history/:task_id", handler.DeleteDownloadHistory)
+			download.POST("/run", handler.CreateDownloadRun)
 		}
 
 		api.POST("/login", handler.Login)
@@ -29,6 +44,7 @@ func SetupAPIRouter() *gin.Engine {
 
 		api.GET("/config", handler.GetServerConfig)
 		api.POST("/config", handler.UpdateServerConfig)
+		api.GET("/config/defaults", handler.GetDefaultConfig)
 	}
 
 	return r
@@ -46,7 +62,22 @@ func SetupWebRouter() *gin.Engine {
 		{
 			files.GET("", handler.GetFiles)
 			files.GET("/download", handler.GetDownloadLink)
+			files.GET("/download-file", handler.DownloadFile)
+			files.POST("/download", handler.CreateDownload)
 			files.POST("/batch", handler.BatchGetDownloadLinks)
+		}
+
+		download := api.Group("/download")
+		{
+			download.GET("/list", handler.ListDownloads)
+			download.GET("/:task_id", handler.GetDownloadStatus)
+			download.POST("/:task_id/pause", handler.PauseDownload)
+			download.POST("/:task_id/resume", handler.ResumeDownload)
+			download.POST("/:task_id/cancel", handler.CancelDownload)
+			download.GET("/history", handler.GetDownloadHistory)
+			download.POST("/clear-history", handler.ClearDownloadHistory)
+			download.DELETE("/history/:task_id", handler.DeleteDownloadHistory)
+			download.POST("/run", handler.CreateDownloadRun)
 		}
 
 		api.POST("/login", handler.Login)
@@ -60,6 +91,7 @@ func SetupWebRouter() *gin.Engine {
 
 		api.GET("/config", handler.GetServerConfig)
 		api.POST("/config", handler.UpdateServerConfig)
+		api.GET("/config/defaults", handler.GetDefaultConfig)
 	}
 
 	return r

@@ -5,17 +5,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/qjfoidnh/BaiduPCS-Go/internal/pcsconfig"
+	"github.com/gin-gonic/gin"
+	"github.com/qjfoidnh/BaiduPCS-Go/pcsutil"
 )
 
 type ServerConfig struct {
-	EnableWeb bool `json:"enable_web"`
-	EnableAPI bool `json:"enable_api"`
-	WebPort   int  `json:"web_port"`
+	EnableWeb     bool   `json:"enable_web"`
+	EnableAPI     bool   `json:"enable_api"`
+	WebPort       int    `json:"web_port"`
+	DownloadBDUSS string `json:"download_bduss"`
 }
 
 func GetServerConfigPath() string {
-	return filepath.Join(pcsconfig.GetConfigDir(), "server.json")
+	exeDir := pcsutil.ExecutablePath()
+	return filepath.Join(exeDir, "server.json")
 }
 
 func LoadServerConfig() (*ServerConfig, error) {
@@ -59,4 +62,18 @@ func SaveServerConfig(config *ServerConfig) error {
 	}
 
 	return os.WriteFile(configPath, data, 0600)
+}
+
+func GetDefaultConfig(c *gin.Context) {
+	exePath, err := os.Executable()
+	if err != nil {
+		exePath = "."
+	}
+	exeDir := filepath.Dir(exePath)
+	downloadDir := filepath.Join(exeDir, "download")
+
+	ResponseSuccess(c, gin.H{
+		"save_dir": downloadDir,
+		"exe_dir":  exeDir,
+	})
 }

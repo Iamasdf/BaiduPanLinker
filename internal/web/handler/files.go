@@ -1,6 +1,12 @@
 package handler
 
 import (
+	"io"
+	"net/http"
+	"net/url"
+	"path"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/qjfoidnh/BaiduPCS-Go/baidupcs"
 	"github.com/qjfoidnh/BaiduPCS-Go/internal/pcsconfig"
@@ -226,6 +232,76 @@ func BatchGetDownloadLinks(c *gin.Context) {
 	ResponseSuccess(c, gin.H{
 		"results": results,
 	})
+}
+
+func DownloadFile(c *gin.Context) {
+	activeUser := pcsconfig.Config.ActiveUser()
+	if activeUser == nil || activeUser.UID == 0 {
+		c.String(401, "未登录百度账号")
+		return
+	}
+
+	filePath := c.Query("path")
+	if filePath == "" {
+		c.String(400, "缺少 path 参数")
+		return
+	}
+
+	pcs := pcsconfig.Config.ActiveUserBaiduPCS()
+	if pcs == nil {
+		c.String(500, "获取网盘实例失败")
+		return
+	}
+
+	info, pcsErr := pcs.LocateDownload(filePath)
+	if pcsErr != nil {
+		c.String(500, "获取下载链接失败: "+pcsErr.Error())
+		return
+	}
+
+	links := info.URLStrings(pcsconfig.Config.EnableHTTPS)
+	if len(links) == 0 {
+		c.String(404, "未找到可用的下载链接")
+		return
+	}
+
+	downloadURL := links[0].String()
+	fileName := path.Base(filePath)
+	fileName = url.PathEscape(fileName)
+
+	client := &http.Client{}
+	req, reqErr := http.NewRequest("GET", downloadURL, nil)
+	if reqErr != nil {
+		c.String(500, "创建请求失败: "+reqErr.Error())
+		return
+	}
+
+	req.Header.Set("User-Agent", "netdisk")
+	bduss := activeUser.BDUSS
+	if bduss != "" {
+		req.AddCookie(&http.Cookie{Name: "BDUSS", Value: bduss})
+	}
+
+	resp, respErr := client.Do(req)
+	if respErr != nil {
+		c.String(500, "下载文件失败: "+respErr.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		c.String(500, "服务器返回错误状态码: "+resp.Status)
+		return
+	}
+
+	c.Header("Content-Disposition", "attachment; filename=\""+fileName+"\"; filename*=UTF-8''"+fileName)
+	c.Header("Content-Type", "application/octet-stream")
+
+	if resp.ContentLength > 0 {
+		c.Header("Content-Length", strconv.FormatInt(resp.ContentLength, 10))
+	}
+
+	io.Copy(c.Writer, resp.Body)
 }
 
 func formatTime(timestamp int64) string {

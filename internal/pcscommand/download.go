@@ -33,6 +33,8 @@ type (
 		ModifyMTime          bool
 		FullPath             bool
 		LinkPrefer           int
+		PCS                  *baidupcs.BaiduPCS
+		ProgressCallback     func(downloaded, total int64, speed string, timeLeft string)
 	}
 
 	// LocateDownloadOption 获取下载链接可选参数
@@ -97,12 +99,18 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	fmt.Printf("[0] 提示: 当前下载最大并发量为: %d, 下载缓存为: %d\n", options.Parallel, cfg.CacheSize)
 
 	var (
-		pcs       = GetBaiduPCS()
+		pcs       *baidupcs.BaiduPCS
 		loadCount = 0
 	)
 
+	if options.PCS != nil {
+		pcs = options.PCS
+	} else {
+		pcs = GetBaiduPCS()
+	}
+
 	// 预测要下载的文件数量
-	file_dir_list := make([]*baidupcs.FileDirectory,0,10)
+	file_dir_list := make([]*baidupcs.FileDirectory, 0, 10)
 	for k := range paths {
 		pcs.FilesDirectoriesRecurseList(paths[k], baidupcs.DefaultOrderOptions, func(depth int, _ string, fd *baidupcs.FileDirectory, pcsError pcserror.Error) bool {
 			if pcsError != nil {
@@ -140,24 +148,25 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	sort.Slice(file_dir_list, func(i, j int) bool {
 		return file_dir_list[i].Size < file_dir_list[j].Size
 	})
-	for _,v := range file_dir_list {
+	for _, v := range file_dir_list {
 		newCfg := *cfg
 		unit := pcsdownload.DownloadTaskUnit{
-			Cfg:                  &newCfg, // 复制一份新的cfg
-			PCS:                  pcs,
-			VerbosePrinter:       pcsCommandVerbose,
-			PrintFormat:          downloadPrintFormat(options.Load),
-			ParentTaskExecutor:   &executor,
-			DownloadStatistic:    statistic,
-			IsPrintStatus:        options.IsPrintStatus,
-			IsExecutedPermission: options.IsExecutedPermission,
-			IsOverwrite:          options.IsOverwrite,
-			NoCheck:              options.NoCheck,
-			DlinkPrefer:          options.LinkPrefer,
-			DownloadMode:         options.DownloadMode,
-			ModifyMTime:          options.ModifyMTime,
-			PcsPath:              v.Path,
-			FileInfo:             v,
+			Cfg:                      &newCfg, // 复制一份新的cfg
+			PCS:                      pcs,
+			VerbosePrinter:           pcsCommandVerbose,
+			PrintFormat:              downloadPrintFormat(options.Load),
+			ParentTaskExecutor:       &executor,
+			DownloadStatistic:        statistic,
+			IsPrintStatus:            options.IsPrintStatus,
+			IsExecutedPermission:     options.IsExecutedPermission,
+			IsOverwrite:              options.IsOverwrite,
+			NoCheck:                  options.NoCheck,
+			DlinkPrefer:              options.LinkPrefer,
+			DownloadMode:             options.DownloadMode,
+			ModifyMTime:              options.ModifyMTime,
+			PcsPath:                  v.Path,
+			FileInfo:                 v,
+			ExternalProgressCallback: options.ProgressCallback,
 		}
 		// 设置下载并发数
 		executor.SetParallel(loadCount)

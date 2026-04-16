@@ -201,6 +201,141 @@
         .rpc-status-dot { width: 8px; height: 8px; border-radius: 50%; }
         .rpc-status-dot.online { background: #137333; }
         .rpc-status-dot.offline { background: #d93025; }
+        .progress-container { margin: 15px 0; }
+        .progress-bar { background: #e0e0e0; border-radius: 4px; height: 20px; overflow: hidden; }
+        .progress-fill { background: #1a73e8; height: 100%; transition: width 0.3s ease; }
+        .progress-info { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #666; }
+        .download-info { background: #f8f9fa; padding: 12px; border-radius: 4px; margin-bottom: 15px; }
+        .download-info p { margin: 5px 0; }
+        
+        .download-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 999;
+            transition: all 0.3s ease;
+            max-height: 520px;
+            display: flex;
+            flex-direction: column;
+        }
+        .download-panel.collapsed {
+            width: 200px;
+            max-height: 50px;
+        }
+        .download-panel.expanded {
+            width: 380px;
+            max-height: 520px;
+        }
+        .panel-header {
+            background: #1a73e8;
+            color: #fff;
+            padding: 12px 15px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            user-select: none;
+        }
+        .download-panel.collapsed .panel-header {
+            border-radius: 8px;
+        }
+        .panel-header:hover { background: #1557b0; }
+        .panel-toggle { font-size: 12px; }
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            display: none;
+        }
+        .download-panel.expanded .panel-body { display: block; }
+        .download-panel.collapsed .panel-body { display: none; }
+        .task-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .task-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .task-item:last-child { border-bottom: none; }
+        .task-item:hover { background: #f8f9fa; }
+        .task-filename {
+            font-weight: 500;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .task-progress-container { margin: 8px 0; }
+        .task-progress-bar {
+            background: #e0e0e0;
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .task-progress-fill {
+            background: #1a73e8;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .task-progress-fill.completed { background: #137333; }
+        .task-progress-fill.failed { background: #d93025; }
+        .task-progress-fill.paused { background: #f9ab00; }
+        .task-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .task-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        .task-actions button {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .panel-footer {
+            padding: 10px 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        .panel-footer button {
+            flex: 1;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .collapsed-summary {
+            display: none;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .download-panel.collapsed .collapsed-summary { display: block; }
+        .no-tasks {
+            padding: 30px;
+            text-align: center;
+            color: #999;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            padding: 10px;
+            border-top: 1px solid #eee;
+        }
+        .pagination button {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .pagination button.active { background: #1a73e8; color: #fff; }
     </style>
 </head>
 <body>
@@ -308,10 +443,71 @@
 
     <div class="modal" id="downloadModal">
         <div class="modal-content">
-            <h2 id="downloadModalTitle">下载地址</h2>
+            <h2>下载文件</h2>
+            <div class="download-info">
+                <p><strong>文件名:</strong> <span id="dlFileName"></span></p>
+                <p><strong>文件大小:</strong> <span id="dlFileSize"></span></p>
+            </div>
+            <div class="form-group">
+                <label>保存路径</label>
+                <input type="text" id="dlSaveDir" placeholder="/path/to/download">
+            </div>
+            <div id="dlProgress" class="progress-container" style="display:none;">
+                <div class="progress-bar">
+                    <div id="dlProgressBar" class="progress-fill" style="width:0%"></div>
+                </div>
+                <div class="progress-info">
+                    <span id="dlProgressText">0%</span>
+                    <span id="dlSpeedText">0KB/s</span>
+                    <span id="dlTimeLeftText">剩余: --</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button id="btnPause" onclick="pauseDownload()" style="display:none;">暂停</button>
+                <button id="btnResume" onclick="resumeDownload()" style="display:none;">恢复</button>
+                <button id="btnCancel" onclick="cancelDownload()">取消</button>
+                <button id="btnConfirm" onclick="confirmDownload()">下载</button>
+                <button class="secondary" onclick="closeDownloadModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="downloadRunModal">
+        <div class="modal-content">
+            <h2>下载文件</h2>
+            <div class="download-info">
+                <p><strong>文件名:</strong> <span id="runFileName"></span></p>
+                <p><strong>文件大小:</strong> <span id="runFileSize"></span></p>
+            </div>
+            <div class="form-group">
+                <label>保存路径</label>
+                <input type="text" id="runSaveDir" placeholder="/path/to/download">
+            </div>
+            <div id="runProgress" class="progress-container" style="display:none;">
+                <div class="progress-bar">
+                    <div id="runProgressBar" class="progress-fill" style="width:0%"></div>
+                </div>
+                <div class="progress-info">
+                    <span id="runProgressText">0%</span>
+                    <span id="runSpeedText">0KB/s</span>
+                    <span id="runTimeLeftText">剩余: --</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button id="btnRunPause" onclick="pauseDownloadRun()" style="display:none;">暂停</button>
+                <button id="btnRunResume" onclick="resumeDownloadRun()" style="display:none;">恢复</button>
+                <button id="btnRunConfirm" onclick="confirmDownloadRun()">下载</button>
+                <button class="secondary" onclick="closeDownloadRunModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="linkModal">
+        <div class="modal-content">
+            <h2>下载地址</h2>
             <div id="downloadLinks"></div>
             <div class="form-actions">
-                <button class="secondary" onclick="closeModal('downloadModal')">关闭</button>
+                <button class="secondary" onclick="closeModal('linkModal')">关闭</button>
             </div>
         </div>
     </div>
@@ -329,6 +525,11 @@
         let currentPath = '/';
         let currentFiles = [];
         let selectedFiles = new Set();
+        let currentDownloadTask = null;
+        let pollInterval = null;
+        let runPollInterval = null;
+        let programSaveDir = './download';
+        let pendingDownloadFile = null;
 
         function e(str) {
             return btoa(unescape(encodeURIComponent(str)));
@@ -574,7 +775,8 @@
                         <span class="file-size">${size}</span>
                         <span class="file-time">${file.mtime_str}</span>
                         <span class="file-actions">
-                            ${!file.is_dir ? `<button onclick="getDownloadLink('${file.path}', '${file.name}')">获取链接</button>` : ''}
+                            ${!file.is_dir ? `<button onclick="downloadFile('${file.path}', '${file.name}', ${file.size})">直链下载</button>` : ''}
+                            ${!file.is_dir ? `<button onclick="downloadRunFile('${file.path}', '${file.name}', ${file.size})" style="background:#137333;">下载</button>` : ''}
                             ${!file.is_dir ? `<button onclick="sendFileToRPC('${file.path}', '${file.name}')">发送到RPC</button>` : ''}
                         </span>
                     </div>
@@ -728,6 +930,10 @@
             } catch (e) {
                 showAlert('发送失败: ' + e.message, 'error');
             }
+        }
+
+        function downloadFile(path, name, size) {
+            showDownloadDialog(path, name, size);
         }
 
         async function sendSelectedToRPC() {
@@ -964,10 +1170,522 @@
             }
         }
 
+        async function initDefaults() {
+            try {
+                const res = await fetch('/api/config/defaults');
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    programSaveDir = data.data.save_dir || './download';
+                }
+            } catch (e) {
+                console.error('Failed to get defaults:', e);
+            }
+        }
+
+        function formatSize(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const k = 1024;
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + units[i];
+        }
+
+        function showDownloadDialog(path, name, size) {
+            pendingDownloadFile = { path, name, size };
+            const saveDir = localStorage.getItem('baidupcs_save_dir') || programSaveDir;
+            
+            document.getElementById('dlFileName').textContent = name;
+            document.getElementById('dlFileSize').textContent = formatSize(size);
+            document.getElementById('dlSaveDir').value = saveDir;
+            document.getElementById('dlProgress').style.display = 'none';
+            document.getElementById('btnPause').style.display = 'none';
+            document.getElementById('btnResume').style.display = 'none';
+            document.getElementById('btnConfirm').style.display = 'inline-block';
+            document.getElementById('btnConfirm').disabled = false;
+            document.getElementById('dlProgressBar').style.width = '0%';
+            document.getElementById('dlProgressText').textContent = '0%';
+            document.getElementById('dlSpeedText').textContent = '0KB/s';
+            document.getElementById('dlTimeLeftText').textContent = '剩余: --';
+            
+            showModal('downloadModal');
+        }
+
+        function showDownloadRunDialog(path, name, size) {
+            pendingDownloadFile = { path, name, size };
+            const saveDir = localStorage.getItem('baidupcs_save_dir') || programSaveDir;
+            
+            document.getElementById('runFileName').textContent = name;
+            document.getElementById('runFileSize').textContent = formatSize(size);
+            document.getElementById('runSaveDir').value = saveDir;
+            document.getElementById('runProgress').style.display = 'none';
+            document.getElementById('btnRunPause').style.display = 'none';
+            document.getElementById('btnRunResume').style.display = 'none';
+            document.getElementById('btnRunConfirm').style.display = 'inline-block';
+            document.getElementById('btnRunConfirm').disabled = false;
+            document.getElementById('runProgressBar').style.width = '0%';
+            document.getElementById('runProgressText').textContent = '0%';
+            document.getElementById('runSpeedText').textContent = '0KB/s';
+            document.getElementById('runTimeLeftText').textContent = '剩余: --';
+            
+            showModal('downloadRunModal');
+        }
+
+        function closeDownloadRunModal() {
+            if (runPollInterval) {
+                clearInterval(runPollInterval);
+                runPollInterval = null;
+            }
+            closeModal('downloadRunModal');
+        }
+
+        async function confirmDownloadRun() {
+            const saveDir = document.getElementById('runSaveDir').value.trim();
+            if (!saveDir) {
+                showAlert('请输入保存路径');
+                return;
+            }
+            
+            const { path, name, size } = pendingDownloadFile;
+            localStorage.setItem('baidupcs_save_dir', saveDir);
+            
+            document.getElementById('btnRunConfirm').disabled = true;
+            document.getElementById('runProgress').style.display = 'block';
+            
+            try {
+                const res = await fetch('/api/download/run', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ path, save_dir: saveDir })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 200) {
+                    showAlert('创建下载任务失败: ' + (data.message || '未知错误'), 'error');
+                    document.getElementById('btnRunConfirm').disabled = false;
+                    return;
+                }
+                
+                currentDownloadTask = data.data;
+                startDownloadRunPolling(currentDownloadTask.task_id);
+            } catch (e) {
+                showAlert('创建下载任务失败: ' + e.message, 'error');
+                document.getElementById('btnRunConfirm').disabled = false;
+            }
+        }
+
+        function startDownloadRunPolling(taskId) {
+            runPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/download/${taskId}`);
+                    const data = await res.json();
+                    
+                    if (data.code !== 200) return;
+                    
+                    const task = data.data;
+                    updateDownloadRunProgress(task);
+                    
+                    if (task.status === 'completed') {
+                        clearInterval(runPollInterval);
+                        showAlert('下载完成: ' + task.save_path, 'success');
+                        closeDownloadRunModal();
+                        refreshDownloadPanel();
+                    } else if (task.status === 'failed') {
+                        clearInterval(runPollInterval);
+                        showAlert('下载失败: ' + (task.error || '未知错误'), 'error');
+                        closeDownloadRunModal();
+                        refreshDownloadPanel();
+                    } else if (task.status === 'cancelled') {
+                        clearInterval(runPollInterval);
+                        closeDownloadRunModal();
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 3000);
+        }
+
+        function updateDownloadRunProgress(task) {
+            document.getElementById('runProgressBar').style.width = (task.progress || 0) + '%';
+            document.getElementById('runProgressText').textContent = (task.progress || 0) + '%';
+            document.getElementById('runSpeedText').textContent = task.speed || '0KB/s';
+            document.getElementById('runTimeLeftText').textContent = '剩余: ' + (task.time_left || '--');
+            
+            if (task.status === 'paused') {
+                document.getElementById('btnRunPause').style.display = 'none';
+                document.getElementById('btnRunResume').style.display = 'inline-block';
+            } else if (task.status === 'running') {
+                document.getElementById('btnRunPause').style.display = 'inline-block';
+                document.getElementById('btnRunResume').style.display = 'none';
+            }
+        }
+
+        async function pauseDownloadRun() {
+            if (!currentDownloadTask) return;
+            try {
+                await fetch(`/api/download/${currentDownloadTask.task_id}/pause`, { method: 'POST' });
+            } catch (e) {
+                showAlert('暂停失败', 'error');
+            }
+        }
+
+        async function resumeDownloadRun() {
+            if (!currentDownloadTask) return;
+            try {
+                await fetch(`/api/download/${currentDownloadTask.task_id}/resume`, { method: 'POST' });
+            } catch (e) {
+                showAlert('恢复失败', 'error');
+            }
+        }
+
+        function downloadRunFile(path, name, size) {
+            showDownloadRunDialog(path, name, size);
+        }
+
+        function closeDownloadModal() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            closeModal('downloadModal');
+        }
+
+        async function confirmDownload() {
+            const saveDir = document.getElementById('dlSaveDir').value.trim();
+            if (!saveDir) {
+                showAlert('请输入保存路径');
+                return;
+            }
+            
+            const { path, name, size } = pendingDownloadFile;
+            localStorage.setItem('baidupcs_save_dir', saveDir);
+            
+            document.getElementById('btnConfirm').disabled = true;
+            document.getElementById('dlProgress').style.display = 'block';
+            
+            try {
+                const res = await fetch('/api/files/download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ path, save_dir: saveDir })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 200) {
+                    showAlert(data.message || '创建下载任务失败', 'error');
+                    document.getElementById('btnConfirm').disabled = false;
+                    return;
+                }
+                
+                currentDownloadTask = data.data;
+                document.getElementById('btnPause').style.display = 'inline-block';
+                document.getElementById('btnCancel').style.display = 'inline-block';
+                document.getElementById('btnConfirm').style.display = 'none';
+                
+                startDownloadPolling(currentDownloadTask.task_id);
+            } catch (e) {
+                showAlert('创建下载任务失败: ' + e.message, 'error');
+                document.getElementById('btnConfirm').disabled = false;
+            }
+        }
+
+        function startDownloadPolling(taskId) {
+            pollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/download/${taskId}`);
+                    const data = await res.json();
+                    
+                    if (data.code !== 200) return;
+                    
+                    const task = data.data;
+                    updateDownloadProgress(task);
+                    
+                    if (task.status === 'completed') {
+                        clearInterval(pollInterval);
+                        showAlert('下载完成: ' + task.save_path, 'success');
+                        closeDownloadModal();
+                    } else if (task.status === 'failed') {
+                        clearInterval(pollInterval);
+                        showAlert('下载失败: ' + (task.error || '未知错误'), 'error');
+                        closeDownloadModal();
+                    } else if (task.status === 'cancelled') {
+                        clearInterval(pollInterval);
+                        closeDownloadModal();
+                    } else if (task.status === 'paused') {
+                        document.getElementById('btnPause').style.display = 'none';
+                        document.getElementById('btnResume').style.display = 'inline-block';
+                    } else if (task.status === 'running') {
+                        document.getElementById('btnPause').style.display = 'inline-block';
+                        document.getElementById('btnResume').style.display = 'none';
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 3000);
+        }
+
+        function updateDownloadProgress(task) {
+            document.getElementById('dlProgressBar').style.width = (task.progress || 0) + '%';
+            document.getElementById('dlProgressText').textContent = (task.progress || 0) + '%';
+            document.getElementById('dlSpeedText').textContent = task.speed || '0KB/s';
+            document.getElementById('dlTimeLeftText').textContent = '剩余: ' + (task.time_left || '--');
+        }
+
+        async function pauseDownload() {
+            if (!currentDownloadTask) return;
+            try {
+                await fetch(`/api/download/${currentDownloadTask.task_id}/pause`, { method: 'POST' });
+            } catch (e) {
+                showAlert('暂停失败', 'error');
+            }
+        }
+
+        async function resumeDownload() {
+            if (!currentDownloadTask) return;
+            try {
+                await fetch(`/api/download/${currentDownloadTask.task_id}/resume`, { method: 'POST' });
+            } catch (e) {
+                showAlert('恢复失败', 'error');
+            }
+        }
+
+        async function cancelDownload() {
+            if (!currentDownloadTask) return;
+            try {
+                await fetch(`/api/download/${currentDownloadTask.task_id}/cancel`, { method: 'POST' });
+            } catch (e) {
+                console.error(e);
+            }
+            closeDownloadModal();
+        }
+
+        initDefaults();
         checkLogin();
         refreshList();
         checkRPCStatus();
         setInterval(checkRPCStatus, 30000);
+        
+        // 下载面板相关
+        let downloadPanelPage = 0;
+        const pageSize = 10;
+        let downloadPollInterval = null;
+        
+        function toggleDownloadPanel() {
+            const panel = document.getElementById('downloadPanel');
+            panel.classList.toggle('collapsed');
+            panel.classList.toggle('expanded');
+        }
+        
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('downloadPanel');
+            if (!panel.contains(e.target) && panel.classList.contains('expanded')) {
+                panel.classList.remove('expanded');
+                panel.classList.add('collapsed');
+            }
+        });
+        
+        async function refreshDownloadPanel() {
+            try {
+                const res = await fetch('/api/download/list');
+                const data = await res.json();
+                
+                if (data.code !== 200) return;
+                
+                const tasks = data.data.tasks || [];
+                updateActiveCount(tasks.length);
+                renderTaskList(tasks);
+            } catch (e) {
+                console.error('刷新下载面板失败:', e);
+            }
+        }
+        
+        function updateActiveCount(count) {
+            document.getElementById('activeCount').textContent = count;
+        }
+        
+        function renderTaskList(tasks) {
+            const list = document.getElementById('taskList');
+            if (!tasks || tasks.length === 0) {
+                list.innerHTML = '<div class="no-tasks">暂无下载任务</div>';
+                return;
+            }
+            
+            const start = downloadPanelPage * pageSize;
+            const end = Math.min(start + pageSize, tasks.length);
+            const pageTasks = tasks.slice(start, end);
+            
+            list.innerHTML = pageTasks.map(task => {
+                const progressClass = task.status === 'completed' ? 'completed' : 
+                                     task.status === 'failed' || task.status === 'cancelled' ? 'failed' :
+                                     task.status === 'paused' ? 'paused' : '';
+                const errorInfo = task.error ? `<div class="task-error" style="color:#d93025;font-size:12px;margin-top:5px;">错误: ${task.error}</div>` : '';
+                return `
+                    <div class="task-item" data-id="${task.id}">
+                        <div class="task-filename" title="${task.file_name || task.path}">${task.file_name || task.path}</div>
+                        ${errorInfo}
+                        <div class="task-progress-container">
+                            <div class="task-progress-bar">
+                                <div class="task-progress-fill ${progressClass}" style="width: ${task.progress || 0}%"></div>
+                            </div>
+                        </div>
+                        <div class="task-info">
+                            <span>${task.progress || 0}%</span>
+                            <span>${task.speed || '0KB/s'}</span>
+                            <span>${task.time_left || '--'}</span>
+                        </div>
+                        <div class="task-actions">
+                            ${task.status === 'running' ? 
+                                `<button onclick="pausePanelTask('${task.id}')">暂停</button>` : 
+                                task.status === 'paused' ? 
+                                `<button onclick="resumePanelTask('${task.id}')">恢复</button>` : ''}
+                            ${task.status !== 'completed' && task.status !== 'cancelled' ? 
+                                `<button class="danger" onclick="cancelPanelTask('${task.id}')">取消</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // 更新分页
+            const totalPages = Math.ceil(tasks.length / pageSize);
+            if (totalPages > 1) {
+                let paginationHtml = '';
+                for (let i = 0; i < totalPages; i++) {
+                    paginationHtml += `<button class="${i === downloadPanelPage ? 'active' : ''}" onclick="goToPanelPage(${i})">${i + 1}</button>`;
+                }
+                document.getElementById('panelPagination').innerHTML = paginationHtml;
+            } else {
+                document.getElementById('panelPagination').innerHTML = '';
+            }
+        }
+        
+        function goToPanelPage(page) {
+            downloadPanelPage = page;
+            refreshDownloadPanel();
+        }
+        
+        async function pausePanelTask(taskId) {
+            try {
+                await fetch(`/api/download/${taskId}/pause`, { method: 'POST' });
+                refreshDownloadPanel();
+            } catch (e) {
+                showAlert('暂停失败', 'error');
+            }
+        }
+        
+        async function resumePanelTask(taskId) {
+            try {
+                await fetch(`/api/download/${taskId}/resume`, { method: 'POST' });
+                refreshDownloadPanel();
+            } catch (e) {
+                showAlert('恢复失败', 'error');
+            }
+        }
+        
+        async function cancelPanelTask(taskId) {
+            try {
+                await fetch(`/api/download/${taskId}/cancel`, { method: 'POST' });
+                refreshDownloadPanel();
+            } catch (e) {
+                showAlert('取消失败', 'error');
+            }
+        }
+        
+        async function pauseAllTasks() {
+            try {
+                const res = await fetch('/api/download/list');
+                const data = await res.json();
+                if (data.code === 200 && data.data.tasks) {
+                    for (const task of data.data.tasks) {
+                        if (task.status === 'running') {
+                            await fetch(`/api/download/${task.id}/pause`, { method: 'POST' });
+                        }
+                    }
+                }
+                refreshDownloadPanel();
+            } catch (e) {
+                showAlert('暂停全部失败', 'error');
+            }
+        }
+        
+        async function clearAllHistory() {
+            if (!confirm('确定要清空所有历史记录吗？')) return;
+            try {
+                await fetch('/api/download/clear-history', { method: 'POST' });
+                showAlert('历史记录已清空', 'success');
+            } catch (e) {
+                showAlert('清空历史失败', 'error');
+            }
+        }
+        
+        function startDownloadPolling() {
+            if (downloadPollInterval) clearInterval(downloadPollInterval);
+            downloadPollInterval = setInterval(refreshDownloadPanel, 3000);
+        }
+        
+        // 覆盖原有的 confirmDownload 函数，关闭弹窗后添加到面板
+        const originalConfirmDownload = confirmDownload;
+        confirmDownload = async function() {
+            const saveDir = document.getElementById('dlSaveDir').value.trim();
+            if (!saveDir) {
+                showAlert('请输入保存路径');
+                return;
+            }
+            
+            const { path, name, size } = pendingDownloadFile;
+            localStorage.setItem('baidupcs_save_dir', saveDir);
+            
+            document.getElementById('btnConfirm').disabled = true;
+            document.getElementById('dlProgress').style.display = 'block';
+            
+            try {
+                const res = await fetch('/api/files/download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ path, save_dir: saveDir })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 200) {
+                    showAlert(data.message || '创建下载任务失败', 'error');
+                    document.getElementById('btnConfirm').disabled = false;
+                    return;
+                }
+                
+                // 关闭弹窗
+                closeDownloadModal();
+                
+                // 展开并刷新下载面板
+                document.getElementById('downloadPanel').classList.remove('collapsed');
+                document.getElementById('downloadPanel').classList.add('expanded');
+                refreshDownloadPanel();
+                startDownloadPolling();
+                
+            } catch (e) {
+                showAlert('创建下载任务失败: ' + e.message, 'error');
+                document.getElementById('btnConfirm').disabled = false;
+            }
+        };
+        
+        // 启动时刷新下载面板
+        refreshDownloadPanel();
+        startDownloadPolling();
     </script>
+    
+    <div id="downloadPanel" class="download-panel collapsed">
+        <div class="panel-header" onclick="toggleDownloadPanel()">
+            <span>▼ 下载任务 (<span id="activeCount">0</span>)</span>
+            <span class="panel-toggle">▼</span>
+        </div>
+        <div class="panel-body">
+            <div class="task-list" id="taskList">
+                <div class="no-tasks">暂无下载任务</div>
+            </div>
+            <div class="pagination" id="panelPagination"></div>
+            <div class="panel-footer">
+                <button class="secondary" onclick="pauseAllTasks()">全部暂停</button>
+                <button onclick="refreshDownloadPanel()">刷新</button>
+                <button class="danger" onclick="clearAllHistory()">清空历史</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

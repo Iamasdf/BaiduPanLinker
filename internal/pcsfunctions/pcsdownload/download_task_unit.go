@@ -53,6 +53,8 @@ type (
 		SavePath string // 保存的路径
 
 		FileInfo *baidupcs.FileDirectory // 文件或目录详情
+
+		ExternalProgressCallback func(downloaded, total int64, speed string, timeLeft string)
 	}
 )
 
@@ -173,6 +175,16 @@ func (dtu *DownloadTaskUnit) download(downloadURL string, client *requester.HTTP
 			leftStr = left.String()
 		}
 
+		// 调用外部进度回调
+		if dtu.ExternalProgressCallback != nil {
+			dtu.ExternalProgressCallback(
+				status.Downloaded(),
+				status.TotalSize(),
+				converter.ConvertFileSize(status.SpeedsPerSecond(), 2)+"/s",
+				leftStr,
+			)
+		}
+
 		fmt.Fprintf(builder, dtu.PrintFormat, dtu.taskInfo.Id(),
 			converter.ConvertFileSize(status.Downloaded(), 2),
 			converter.ConvertFileSize(status.TotalSize(), 2),
@@ -283,8 +295,11 @@ func (dtu *DownloadTaskUnit) execPanDownload(dlink string, result *taskframework
 	dtu.verboseInfof("[%s] 获取到下载链接: %s\n", dtu.taskInfo.Id(), dlink)
 
 	client := dtu.panHTTPClient()
-	activePCS := pcsconfig.Config.ActiveUserBaiduPCS()
-	cookieJar := activePCS.GetClient().Jar
+	pcsForDownload := dtu.PCS
+	if pcsForDownload == nil {
+		pcsForDownload = pcsconfig.Config.ActiveUserBaiduPCS()
+	}
+	cookieJar := pcsForDownload.GetClient().Jar
 	newCookieJar, _ := CloneJarWithDomain(cookieJar, dlink)
 	client.SetCookiejar(newCookieJar)
 	err := dtu.download(dlink, client)
