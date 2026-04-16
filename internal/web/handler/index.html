@@ -474,7 +474,7 @@
 
     <div class="modal" id="downloadRunModal">
         <div class="modal-content">
-            <h2>下载文件</h2>
+            <h2>PCS下载文件</h2>
             <div class="download-info">
                 <p><strong>文件名:</strong> <span id="runFileName"></span></p>
                 <p><strong>文件大小:</strong> <span id="runFileSize"></span></p>
@@ -776,7 +776,7 @@
                         <span class="file-time">${file.mtime_str}</span>
                         <span class="file-actions">
                             ${!file.is_dir ? `<button onclick="downloadFile('${file.path}', '${file.name}', ${file.size})">直链下载</button>` : ''}
-                            ${!file.is_dir ? `<button onclick="downloadRunFile('${file.path}', '${file.name}', ${file.size})" style="background:#137333;">下载</button>` : ''}
+                            ${!file.is_dir ? `<button onclick="downloadRunFile('${file.path}', '${file.name}', ${file.size})" style="background:#137333;">PCS下载</button>` : ''}
                             ${!file.is_dir ? `<button onclick="sendFileToRPC('${file.path}', '${file.name}')">发送到RPC</button>` : ''}
                         </span>
                     </div>
