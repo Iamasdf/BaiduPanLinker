@@ -16,8 +16,8 @@ A web-based Baidu Netdisk management tool with built-in download capabilities - 
 
 - **File Browsing** - Browse directories, view file info (size, modified time)
 - **Direct Download** - Download files directly with multi-threaded acceleration
-- **Download** - Use BaiduPCS native download for better compatibility
-- **Aria2 Integration** - Send files to Aria2 RPC downloader
+- **PCS Download** - Use BaiduPCS command-line download for better compatibility
+- **Third-party Tools** - Support Aria2, IDM and other download managers via RPC/API
 - **Progress Display** - Real-time download progress in Web UI
 - **Download Panel** - Floating panel to monitor all download tasks
 - **Pause/Resume** - Pause and resume downloads at any time
@@ -44,8 +44,8 @@ A web-based Baidu Netdisk management tool with built-in download capabilities - 
 
 4. **Download files:**
    - Click "直链下载" for direct download
-   - Click "下载" for BaiduPCS native download
-   - Click "发送到RPC" to send to Aria2
+   - Click "PCS下载" for BaiduPCS command download
+   - Click "发送到RPC" to send to Aria2 or other RPC tools
 
 ### API Endpoints
 
@@ -54,7 +54,7 @@ A web-based Baidu Netdisk management tool with built-in download capabilities - 
 | `/api/files` | GET | List files |
 | `/api/files/download` | GET | Get direct download link |
 | `/api/download` | POST | Create direct download task |
-| `/api/download/run` | POST | Create Run download task |
+| `/api/download/run` | POST | Create PCS download task |
 | `/api/download/status/:task_id` | GET | Get download status |
 | `/api/download/list` | GET | List active tasks |
 | `/api/download/pause/:task_id` | POST | Pause download |
@@ -84,14 +84,14 @@ Apache License 2.0 - See [LICENSE](./LICENSE) for details.
 
 ### 百度网盘 Web 管理器
 
-基于 Web 界面的百度网盘管理工具，支持直链下载和 下载，无需浏览器插件。
+基于 Web 界面的百度网盘管理工具，支持直链下载、PCS下载和第三方下载工具，无需浏览器插件。
 
 ### 功能特点
 
 - **文件浏览** - 浏览目录，查看文件大小、修改时间
 - **直链下载** - 多线程直链下载，实时显示进度
-- **下载** - 使用 BaiduPCS 原生命令下载
-- **Aria2集成** - 推送文件到 Aria2 RPC 下载器
+- **PCS下载** - 使用 BaiduPCS 命令下载，兼容性更好
+- **第三方工具** - 支持 Aria2、IDM 等下载工具（RPC/API）
 - **进度显示** - Web 界面实时显示下载进度
 - **下载面板** - 浮动面板监控所有下载任务
 - **暂停/恢复** - 随时暂停和恢复下载
@@ -118,8 +118,8 @@ Apache License 2.0 - See [LICENSE](./LICENSE) for details.
 
 4. **下载文件：**
    - 点击「直链下载」直接下载
-   - 点击「下载」使用原生命令
-   - 点击「发送到RPC」推送到 Aria2
+   - 点击「PCS下载」使用命令下载
+   - 点击「发送到RPC」推送到 Aria2 等第三方工具
 
 ### API 接口
 
@@ -128,7 +128,7 @@ Apache License 2.0 - See [LICENSE](./LICENSE) for details.
 | `/api/files` | GET | 获取文件列表 |
 | `/api/files/download` | GET | 获取直链 |
 | `/api/download` | POST | 创建直链下载任务 |
-| `/api/download/run` | POST | 创建 下载任务 |
+| `/api/download/run` | POST | 创建 PCS 下载任务 |
 | `/api/download/status/:task_id` | GET | 获取任务状态 |
 | `/api/download/list` | GET | 列出活动任务 |
 | `/api/download/pause/:task_id` | POST | 暂停任务 |
